@@ -1,40 +1,95 @@
 using UnityEngine;
 
-public class animationStateController : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
-    Animator animator;
-    int isWalkingHash;
-    int isRunningHash;
-
-    int isJumpingHash;
-    int moveXHash;
-    int moveZHash;
-
-
+    [Header("Viteza")]
     public float walkSpeed = 2f;
     public float runSpeed = 5f;
-    public float rotateSpeed = 75f;
+    public float crouchSpeed = 1f;
+    
+    [Header("Raycast")]
+    public float rayDistance = 0.5f;
+    
+    [Header("Salt")]
     public float jumpForce = 5f;
-
-    Rigidbody rb;
-    bool isGrounded = true;
+    
+    private Rigidbody rb;
+    private bool isGrounded = true;
+    private bool isCrouching = false;
 
     void Start()
     {
-        PrintInstruction();
-        animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody>();
-        isWalkingHash = Animator.StringToHash("isWalking");
-        isRunningHash = Animator.StringToHash("isRunning");
-        isJumpingHash = Animator.StringToHash("isJumping");
-        moveXHash = Animator.StringToHash("MoveX");
-        moveZHash = Animator.StringToHash("MoveZ");
     }
 
     void Update()
-    
     {
-        MovePlayer();
+        HandleMovement();
+        HandleJump();
+    }
+
+    void HandleMovement()
+    {
+        bool forwardPressed = Input.GetKey("w");
+        bool backPressed = Input.GetKey("s");
+        bool leftPressed = Input.GetKey("a");
+        bool rightPressed = Input.GetKey("d");
+        bool runPressed = Input.GetKey("left shift");
+        bool crouchPressed = Input.GetKey("c"); // Schimbă "c" cu orice tasta vrei
+
+        // Determina viteza
+        float currentSpeed = walkSpeed;
+        if (crouchPressed)
+        {
+            currentSpeed = crouchSpeed;
+            isCrouching = true;
+        }
+        else if (runPressed && (forwardPressed || backPressed))
+        {
+            currentSpeed = runSpeed;
+            isCrouching = false;
+        }
+        else
+        {
+            isCrouching = false;
+        }
+
+        // === INAINTE ===
+        if (forwardPressed)
+        {
+            if (!IsPathBlocked(transform.forward))
+                transform.Translate(Vector3.forward * currentSpeed * Time.deltaTime);
+        }
+
+        // === INAPOI ===
+        if (backPressed)
+        {
+            if (!IsPathBlocked(-transform.forward))
+                transform.Translate(Vector3.back * currentSpeed * Time.deltaTime);
+        }
+
+        // === DREAPTA ===
+        if (rightPressed)
+        {
+            if (!IsPathBlocked(transform.right))
+                transform.Translate(Vector3.right * currentSpeed * Time.deltaTime);
+        }
+
+        // === STANGA ===
+        if (leftPressed)
+        {
+            if (!IsPathBlocked(-transform.right))
+                transform.Translate(Vector3.left * currentSpeed * Time.deltaTime);
+        }
+    }
+
+    void HandleJump()
+    {
+        if (Input.GetKeyDown("space") && isGrounded && !isCrouching)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            isGrounded = false;
+        }
     }
 
     void OnCollisionEnter(Collision collision)
@@ -43,53 +98,15 @@ public class animationStateController : MonoBehaviour
             isGrounded = true;
     }
 
-    void PrintInstruction()
+    // ===== RAYCAST CHECK =====
+    bool IsPathBlocked(Vector3 direction)
     {
-        Debug.Log("Welcome to the game");
-        Debug.Log("Move using wasd");
-        Debug.Log("Don't bump into objects");
+        if (direction.magnitude < 0.1f) return false;
+
+        return Physics.Raycast(
+            transform.position + Vector3.up * 0.5f,
+            direction.normalized,
+            rayDistance
+        );
     }
-
-
-    void MovePlayer()
-{
-    bool forwardPressed = Input.GetKey("w");
-    bool backPressed = Input.GetKey("s");
-    bool runPressed = Input.GetKey("left shift");
-    bool rightPressed = Input.GetKey("d");
-    bool leftPressed = Input.GetKey("a");
-    bool jumpPressed = Input.GetKeyDown("space");
-
-    // Calculeaza MoveX/MoveZ pentru Blend Tree
-    float moveX = (rightPressed ? 1f : 0f) - (leftPressed ? 1f : 0f);
-    float moveZ = (forwardPressed ? 1f : 0f) - (backPressed ? 1f : 0f);
-    animator.SetFloat(moveXHash, moveX, 0.1f, Time.deltaTime);
-    animator.SetFloat(moveZHash, moveZ, 0.1f, Time.deltaTime);
-
-    animator.SetBool(isWalkingHash, forwardPressed || backPressed || rightPressed || leftPressed);
-    animator.SetBool(isRunningHash, (forwardPressed || backPressed) && runPressed);
-
-    float speed = runPressed ? runSpeed : walkSpeed;
-
-    // Strafe stanga/dreapta - fara rotatie, doar translatie
-    if (rightPressed)
-        transform.Translate(Vector3.right * speed * Time.deltaTime);
-    if (leftPressed)
-        transform.Translate(Vector3.left * speed * Time.deltaTime);
-
-    // Inainte / inapoi
-    if (forwardPressed)
-        transform.Translate(Vector3.forward * speed * Time.deltaTime);
-    if (backPressed)
-        transform.Translate(Vector3.back * walkSpeed * Time.deltaTime);
-
-    // Jump
-    if (jumpPressed && isGrounded)
-    {
-        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-        isGrounded = false;
-        animator.SetTrigger(isJumpingHash);
-    }
-}
-  
 }
