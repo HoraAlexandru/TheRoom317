@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VHSRendererFeature
   m_Active: 1
   settings:
-    material: {fileID: 2100000, guid: 755f7a2b5162a1644a43bc1364294cc4, type: 2}
+    material: {fileID: 0}
     renderPassEvent: 600
 --- !u!114 &11400000
 MonoBehaviour:
